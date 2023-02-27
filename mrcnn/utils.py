@@ -67,6 +67,8 @@ def compute_iou(box, boxes, box_area, boxes_area):
     Note: the areas are passed in rather than calculated here for
     efficiency. Calculate once in the caller to avoid duplicate work.
     """
+    #print(box[0], boxes[:, 0])
+    #print(box[2], boxes[:, 2])
     # Calculate intersection areas
     y1 = np.maximum(box[0], boxes[:, 0])
     y2 = np.minimum(box[2], boxes[:, 2])
@@ -74,7 +76,9 @@ def compute_iou(box, boxes, box_area, boxes_area):
     x2 = np.minimum(box[3], boxes[:, 3])
     intersection = np.maximum(x2 - x1, 0) * np.maximum(y2 - y1, 0)
     union = box_area + boxes_area[:] - intersection[:]
+    #print(intersection, "intersection", union)
     iou = intersection / union
+    #print("iou", iou)
     return iou
 
 
@@ -199,8 +203,8 @@ def box_refinement_graph(box, gt_box):
 
     dy = (gt_center_y - center_y) / height
     dx = (gt_center_x - center_x) / width
-    dh = tf.math.log(gt_height / height)
-    dw = tf.math.log(gt_width / width)
+    dh = tf.log(gt_height / height)
+    dw = tf.log(gt_width / width)
 
     result = tf.stack([dy, dx, dh, dw], axis=1)
     return result
@@ -356,6 +360,7 @@ class Dataset(object):
         """Load the specified image and return a [H,W,3] Numpy array.
         """
         # Load image
+        #print("self.image_info[image_id]['path']", self.image_info[image_id]['path'])
         image = skimage.io.imread(self.image_info[image_id]['path'])
         # If grayscale. Convert to RGB for consistency.
         if image.ndim != 3:
@@ -723,11 +728,21 @@ def compute_ap(gt_boxes, gt_class_ids, gt_masks,
     recalls: List of recall values at different class score thresholds.
     overlaps: [pred_boxes, gt_boxes] IoU overlaps.
     """
+    print("gt_boxes : ", gt_boxes)
+    print("gt_class_ids : ", gt_class_ids)
+    print("gt_masks : ", gt_masks)
+    print("pred_boxes : ", pred_boxes)
+    print("pred_scores : ", pred_scores)
+    print("pred_masks : ", pred_masks)
     # Get matches and overlaps
     gt_match, pred_match, overlaps = compute_matches(
         gt_boxes, gt_class_ids, gt_masks,
         pred_boxes, pred_class_ids, pred_scores, pred_masks,
         iou_threshold)
+
+    print("gt_match : ", gt_match)
+    print("pred_match : ", pred_match)
+    print("overlaps : ", overlaps)
 
     # Compute precision and recall at each prediction box step
     precisions = np.cumsum(pred_match > -1) / (np.arange(len(pred_match)) + 1)
